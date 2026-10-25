@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Kasir Sederhana</title>
+    <!-- Menggunakan Tailwind CSS untuk styling yang cepat dan rapi -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+
+    <div class="container mx-auto p-6 max-w-4xl">
+        <h1 class="text-3xl font-bold text-center mb-6 text-gray-800">Aplikasi Kasir Sederhana</h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- Daftar Produk -->
+            <div class="bg-white p-4 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700">Pilih Produk</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <button onclick="tambahItem('Nasi Goreng', 15000)" class="p-4 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition flex flex-col items-center justify-center">
+                        <span class="font-bold">Nasi Goreng</span>
+                        <span class="text-sm">Rp 15.000</span>
+                    </button>
+                    <button onclick="tambahItem('Ayam Geprek', 18000)" class="p-4 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition flex flex-col items-center justify-center">
+                        <span class="font-bold">Ayam Geprek</span>
+                        <span class="text-sm">Rp 18.000</span>
+                    </button>
+                    <button onclick="tambahItem('Mie Instan', 8000)" class="p-4 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition flex flex-col items-center justify-center">
+                        <span class="font-bold">Mie Instan</span>
+                        <span class="text-sm">Rp 8.000</span>
+                    </button>
+                    <button onclick="tambahItem('Es Teh', 5000)" class="p-4 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition flex flex-col items-center justify-center">
+                        <span class="font-bold">Es Teh</span>
+                        <span class="text-sm">Rp 5.000</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Keranjang & Pembayaran -->
+            <div class="bg-white p-4 rounded-lg shadow-md flex flex-col justify-between">
+                <div>
+                    <h2 class="text-xl font-semibold mb-4 text-gray-700">Keranjang Belanja</h2>
+                    <div class="overflow-y-auto max-h-48 mb-4 border-b pb-2">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-gray-600 border-b">
+                                    <th class="py-2">Item</th>
+                                    <th class="py-2">Qty</th>
+                                    <th class="py-2">Subtotal</th>
+                                    <th class="py-2">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabel-keranjang">
+                                <!-- Item keranjang akan masuk lewat JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center text-lg font-bold mb-4">
+                        <span>Total:</span>
+                        <span id="total-harga" class="text-teal-600">Rp 0</span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Uang Tunai Pembeli:</label>
+                        <input type="number" id="uang-bayar" placeholder="Masukkan jumlah uang" class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+                    </div>
+
+                    <button onclick="prosesBayar()" class="w-full bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition font-bold mb-2">Hitung Pembayaran</button>
+                    <button onclick="resetTransaksi()" class="w-full bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition text-sm">Reset Transaksi</button>
+
+                    <div id="info-kembalian" class="mt-4 text-center font-semibold text-gray-700"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Logika JavaScript -->
+    <script>
+        let keranjang = [];
+
+        function tambahItem(nama, harga) {
+            let itemAda = keranjang.find(item => item.nama === nama);
+            if (itemAda) {
+                itemAda.qty += 1;
+            } else {
+                keranjang.push({ nama, harga, qty: 1 });
+            }
+            renderKeranjang();
+        }
+
+        function hapusItem(nama) {
+            keranjang = keranjang.filter(item => item.nama !== nama);
+            renderKeranjang();
+        }
+
+        function renderKeranjang() {
+            let tabel = document.getElementById("tabel-keranjang");
+            tabel.innerHTML = "";
+            let total = 0;
+
+            if (keranjang.length === 0) {
+                tabel.innerHTML = `<tr><td colspan="4" class="text-center text-gray-400 py-4">Keranjang kosong</td></tr>`;
+            }
+
+            keranjang.forEach(item => {
+                let subtotal = item.harga * item.qty;
+                total += subtotal;
+
+                tabel.innerHTML += `
+                    <tr class="border-b">
+                        <td class="py-2">${item.nama}</td>
+                        <td class="py-2">${item.qty}</td>
+                        <td class="py-2">Rp ${subtotal.toLocaleString()}</td>
+                        <td class="py-2">
+                            <button onclick="hapusItem('${item.nama}')" class="text-red-500 hover:underline text-sm">Hapus</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById("total-harga").innerText = `Rp ${total.toLocaleString()}`;
+        }
+
+        function hitungTotalBelanja() {
+            return keranjang.reduce((sum, item) => sum + (item.harga * item.qty), 0);
+        }
+
+        function prosesBayar() {
+            let total = hitungTotalBelanja();
+            let uangBayar = parseInt(document.getElementById("uang-bayar").value);
+            let info = document.getElementById("info-kembalian");
+
+            if (total === 0) {
+                alert("Keranjang masih kosong!");
+                return;
+            }
+
+            if (isNaN(uangBayar) || uangBayar < total) {
+                alert("Uang tunai kurang atau tidak valid!");
+                info.innerText = "";
+                return;
+            }
+
+            let kembalian = uangBayar - total;
+            info.innerHTML = `<span class="text-green-600 font-bold">Kembalian: Rp ${kembalian.toLocaleString()}</span>`;
+        }
+
+        function resetTransaksi() {
+            keranjang = [];
+            document.getElementById("uang-bayar").value = "";
+            document.getElementById("info-kembalian").innerText = "";
+            renderKeranjang();
+        }
+    </script>
+</body>
+</html>
