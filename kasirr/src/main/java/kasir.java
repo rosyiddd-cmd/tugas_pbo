@@ -1,22 +1,18 @@
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
 
 public class kasir extends JFrame {
-    private JComboBox<String> comboBarang;
-    private JTextField txtHarga, txtJumlah, txtBayar;
-    private JTable tabelKeranjang;
-    private DefaultTableModel modelTabel;
-    private JLabel lblTotal;
-    private JTextArea txtStruk;
 
-    // Data pilihan barang dan harganya
-    private final String[] namaBarang = {
+    // Daftar Barang beserta Harganya
+    private String[] namaBarangList = {
         "-- Pilih Barang --", 
         "Buku Tulis", 
         "Pensil 2B", 
@@ -27,255 +23,313 @@ public class kasir extends JFrame {
         "Spidol Boardmarker"
     };
     
-    private final int[] hargaBarang = {0, 5000, 3000, 4500, 4000, 2000, 7000, 8500};
+    private int[] hargaBarangList = {0, 5000, 3000, 4500, 4000, 2000, 7000, 8500};
+
+    // Komponen GUI
+    private JComboBox<String> cbBarang;
+    private JTextField tfHarga, tfJumlah, tfBayar;
+    private JTable tabelKeranjang;
+    private DefaultTableModel tableModel;
+    private JLabel lblTotal;
+    private JTextArea taStruk;
+
+    // Struktur Data Keranjang Belanja
+    private ArrayList<ItemBelanja> keranjang = new ArrayList<>();
+    private int totalBelanja = 0;
     
-    private double totalBelanja = 0;
-    private NumberFormat rupiahFormat = NumberFormat.getCurrencyInstance(new Locale("id", "ID"));
+    // Format Rupiah Indonesia
+    private Locale localeID = new Locale("id", "ID");
+    private NumberFormat formatRupiah = NumberFormat.getCurrencyInstance(localeID);
 
     public kasir() {
-        setTitle("Aplikasi Kasir Pembayaran");
-        setSize(850, 680);
+        setTitle("Aplikasi Kasir Pembayaran - Java Swing");
+        setSize(850, 700);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
+        
+        // Warna Tema Utama (Putih & Oranye)
+        Color bgTheme = new Color(255, 247, 242);
+        Color orangePrimary = new Color(255, 102, 0);
+        Color cardBg = Color.WHITE;
+
+        getContentPane().setBackground(bgTheme);
         setLayout(new BorderLayout(10, 10));
-        getContentPane().setBackground(new Color(255, 247, 242)); // Tema putih & oranye lembut
 
-        // Panel Utama dengan Grid 2 Kolom
-        JPanel mainPanel = new JPanel(new GridLayout(1, 2, 15, 15));
-        mainPanel.setBackground(new Color(255, 247, 242));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        // --- PANEL UTAMA (Grid 2 Kolom) ---
+        JPanel panelUtama = new JPanel(new GridLayout(1, 2, 15, 15));
+        panelUtama.setBorder(new EmptyBorder(15, 15, 15, 15));
+        panelUtama.setBackground(bgTheme);
 
-        // --- KOLOM KIRI: Form Input Barang ---
-        JPanel panelKiri = new JPanel();
-        panelKiri.setLayout(new BoxLayout(panelKiri, BoxLayout.Y_AXIS));
-        panelKiri.setBackground(Color.WHITE);
-        panelKiri.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(255, 230, 213)),
-            BorderFactory.createEmptyBorder(15, 15, 15, 15)
+        // --- KARTU 1: INPUT BARANG ---
+        JPanel panelInput = new JPanel();
+        panelInput.setLayout(new BoxLayout(panelInput, BoxLayout.Y_AXIS));
+        panelInput.setBackground(cardBg);
+        panelInput.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(255, 230, 213), 2),
+            new EmptyBorder(15, 15, 15, 15)
         ));
 
-        JLabel lblJudul1 = new JLabel("Kasir Pembayaran");
+        JLabel lblJudul1 = new JLabel("Form Transaksi Kasir");
         lblJudul1.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        lblJudul1.setForeground(new Color(255, 102, 0));
+        lblJudul1.setForeground(orangePrimary);
         lblJudul1.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panelKiri.add(lblJudul1);
-        panelKiri.add(Box.createVerticalStrut(15));
+        panelInput.add(lblJudul1);
+        panelInput.add(Box.createRigidArea(new Dimension(0, 15)));
 
-        panelKiri.add(createLabel("Pilih Barang"));
-        comboBarang = new JComboBox<>(namaBarang);
-        comboBarang.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
-        
-        // Event otomatis saat barang dipilih, harga langsung terisi
-        comboBarang.addActionListener(new ActionListener() {
+        // Pilihan Barang (Dropdown)
+        panelInput.add(buatLabel("Pilih Barang:"));
+        cbBarang = new JComboBox<>(namaBarangList);
+        cbBarang.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        cbBarang.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                int index = comboBarang.getSelectedIndex();
-                txtHarga.setText(String.valueOf(hargaBarang[index]));
+                int selectedIndex = cbBarang.getSelectedIndex();
+                int harga = hargaBarangList[selectedIndex];
+                tfHarga.setText(String.valueOf(harga));
             }
         });
-        panelKiri.add(comboBarang);
-        panelKiri.add(Box.createVerticalStrut(10));
+        panelInput.add(cbBarang);
+        panelInput.add(Box.createRigidArea(new Dimension(0, 10)));
 
-        panelKiri.add(createLabel("Harga Satuan (Rp)"));
-        txtHarga = new JTextField("0");
-        txtHarga.setEditable(false);
-        txtHarga.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
-        txtHarga.setBackground(new Color(255, 240, 230));
-        panelKiri.add(txtHarga);
-        panelKiri.add(Box.createVerticalStrut(10));
+        // Harga Satuan (Otomatis & Readonly)
+        panelInput.add(buatLabel("Harga Satuan (Rp):"));
+        tfHarga = new JTextField("0");
+        tfHarga.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        tfHarga.setEditable(false);
+        tfHarga.setBackground(new Color(255, 240, 230));
+        tfHarga.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        panelInput.add(tfHarga);
+        panelInput.add(Box.createRigidArea(new Dimension(0, 10)));
 
-        panelKiri.add(createLabel("Jumlah"));
-        txtJumlah = new JTextField("1");
-        txtJumlah.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
-        panelKiri.add(txtJumlah);
-        panelKiri.add(Box.createVerticalStrut(20));
+        // Jumlah Beli
+        panelInput.add(buatLabel("Jumlah:"));
+        tfJumlah = new JTextField("1");
+        tfJumlah.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        panelInput.add(tfJumlah);
+        panelInput.add(Box.createRigidArea(new Dimension(15, 15)));
 
-        JButton btnTambah = createButton("+ Tambah ke Keranjang", new Color(255, 102, 0));
-        btnTambah.addActionListener(e -> tambahItemToKeranjang());
-        panelKiri.add(btnTambah);
+        // Tombol Tambah
+        JButton btnTambah = buatTombol("Tambah ke Keranjang", orangePrimary);
+        btnTambah.addActionListener(e -> tambahKeKeranjang());
+        panelInput.add(btnTambah);
 
-        mainPanel.add(panelKiri);
+        panelUtama.add(panelInput);
 
-        // --- KOLOM KANAN: Keranjang & Pembayaran ---
-        JPanel panelKanan = new JPanel();
-        panelKanan.setLayout(new BoxLayout(panelKanan, BoxLayout.Y_AXIS));
-        panelKanan.setBackground(Color.WHITE);
-        panelKanan.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(255, 230, 213)),
-            BorderFactory.createEmptyBorder(15, 15, 15, 15)
+        // --- KARTU 2: KERANJANG & PEMBAYARAN ---
+        JPanel panelKeranjang = new JPanel();
+        panelKeranjang.setLayout(new BoxLayout(panelKeranjang, BoxLayout.Y_AXIS));
+        panelKeranjang.setBackground(cardBg);
+        panelKeranjang.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(255, 230, 213), 2),
+            new EmptyBorder(15, 15, 15, 15)
         ));
 
         JLabel lblJudul2 = new JLabel("Daftar Belanja");
         lblJudul2.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        lblJudul2.setForeground(new Color(255, 102, 0));
+        lblJudul2.setForeground(orangePrimary);
         lblJudul2.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panelKanan.add(lblJudul2);
-        panelKanan.add(Box.createVerticalStrut(10));
+        panelKeranjang.add(lblJudul2);
+        panelKeranjang.add(Box.createRigidArea(new Dimension(0, 10)));
 
-        modelTabel = new DefaultTableModel(new String[]{"Barang", "Harga", "Qty", "Subtotal"}, 0);
-        tabelKeranjang = new JTable(modelTabel);
+        // Tabel Keranjang
+        String[] kolom = {"Barang", "Harga", "Qty", "Subtotal"};
+        tableModel = new DefaultTableModel(kolom, 0);
+        tabelKeranjang = new JTable(tableModel);
         JScrollPane scrollPane = new JScrollPane(tabelKeranjang);
-        scrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, 140));
-        panelKanan.add(scrollPane);
-        panelKanan.add(Box.createVerticalStrut(10));
+        scrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
+        panelKeranjang.add(scrollPane);
+        panelKeranjang.add(Box.createRigidArea(new Dimension(0, 10)));
 
+        // Box Total
         JPanel panelTotal = new JPanel(new BorderLayout());
         panelTotal.setBackground(new Color(255, 240, 230));
-        panelTotal.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         panelTotal.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
-        JLabel lblTotalText = new JLabel("Total Belanja:");
-        lblTotalText.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        panelTotal.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        
+        JLabel lblTotalTeks = new JLabel("Total Belanja:");
+        lblTotalTeks.setFont(new Font("Segoe UI", Font.BOLD, 14));
         lblTotal = new JLabel("Rp 0");
         lblTotal.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        lblTotal.setForeground(new Color(255, 102, 0));
-        panelTotal.add(lblTotalText, BorderLayout.WEST);
+        lblTotal.setForeground(orangePrimary);
+        
+        panelTotal.add(lblTotalTeks, BorderLayout.WEST);
         panelTotal.add(lblTotal, BorderLayout.EAST);
-        panelKanan.add(panelTotal);
-        panelKanan.add(Box.createVerticalStrut(10));
+        panelKeranjang.add(panelTotal);
+        panelKeranjang.add(Box.createRigidArea(new Dimension(0, 10)));
 
-        panelKanan.add(createLabel("Uang Dibayar (Rp)"));
-        txtBayar = new JTextField();
-        txtBayar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
-        panelKanan.add(txtBayar);
-        panelKanan.add(Box.createVerticalStrut(10));
+        // Input Bayar
+        panelKeranjang.add(buatLabel("Uang Dibayar (Rp):"));
+        tfBayar = new JTextField();
+        tfBayar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        panelKeranjang.add(tfBayar);
+        panelKeranjang.add(Box.createRigidArea(new Dimension(10, 10)));
 
-        JButton btnBayar = createButton("Proses Pembayaran", new Color(255, 102, 0));
+        // Tombol Proses & Reset
+        JButton btnBayar = buatTombol("Proses Pembayaran", orangePrimary);
         btnBayar.addActionListener(e -> prosesPembayaran());
-        panelKanan.add(btnBayar);
+        panelKeranjang.add(btnBayar);
+        
+        panelKeranjang.add(Box.createRigidArea(new Dimension(0, 5)));
+        JButton btnReset = buatTombol("Reset Transaksi", new Color(120, 120, 120));
+        btnReset.addActionListener(e -> resetKasir());
+        panelKeranjang.add(btnReset);
 
-        panelKanan.add(Box.createVerticalStrut(5));
-        JButton btnReset = createButton("Reset Transaksi", Color.WHITE);
-        btnReset.setForeground(new Color(255, 102, 0));
-        btnReset.setBorder(BorderFactory.createLineBorder(new Color(255, 102, 0)));
-        btnReset.addActionListener(e -> resetTransaksi());
-        panelKanan.add(btnReset);
+        panelUtama.add(panelKeranjang);
+        add(panelUtama, BorderLayout.CENTER);
 
-        mainPanel.add(panelKanan);
-        add(mainPanel, BorderLayout.CENTER);
-
-        // --- BAGIAN BAWAH: Nota / Struk ---
-        txtStruk = new JTextArea(6, 20);
-        txtStruk.setFont(new Font("Courier New", Font.PLAIN, 12));
-        txtStruk.setEditable(false);
-        txtStruk.setBackground(new Color(255, 248, 245));
-        JScrollPane scrollStruk = new JScrollPane(txtStruk);
+        // --- AREA STRUK NOTA (DI BAGIAN BAWAH) ---
+        taStruk = new JTextArea(8, 20);
+        taStruk.setEditable(false);
+        taStruk.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        taStruk.setBackground(new Color(255, 252, 249));
+        
+        JScrollPane scrollStruk = new JScrollPane(taStruk);
         scrollStruk.setBorder(BorderFactory.createTitledBorder(
-            BorderFactory.createLineBorder(new Color(255, 153, 85)), "Nota Pembayaran"
+            BorderFactory.createLineBorder(orangePrimary), " Nota / Struk Pembayaran "
         ));
         
         JPanel panelBawah = new JPanel(new BorderLayout());
-        panelBawah.setBackground(new Color(255, 247, 242));
-        panelBawah.setBorder(BorderFactory.createEmptyBorder(0, 15, 15, 15));
-        panelBawah.add(scrollStruk);
+        panelBawah.setBorder(new EmptyBorder(0, 15, 15, 15));
+        panelBawah.setBackground(bgTheme);
+        panelBawah.add(scrollStruk, BorderLayout.CENTER);
+        
         add(panelBawah, BorderLayout.SOUTH);
     }
 
-    private JLabel createLabel(String text) {
-        JLabel label = new JLabel(text);
+    // Fungsi Pembantu Membuat Label
+    private JLabel buatLabel(String teks) {
+        JLabel label = new JLabel(teks);
         label.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        label.setForeground(new Color(85, 85, 85));
+        label.setForeground(new Color(80, 80, 80));
         label.setAlignmentX(Component.LEFT_ALIGNMENT);
         return label;
     }
 
-    private JButton createButton(String text, Color bg) {
-        JButton btn = new JButton(text);
-        btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        btn.setBackground(bg);
-        btn.setForeground(bg.equals(Color.WHITE) ? new Color(255, 102, 0) : Color.WHITE);
-        btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        btn.setFocusPainted(false);
-        btn.setAlignmentX(Component.LEFT_ALIGNMENT);
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        return btn;
+    // Fungsi Pembantu Membuat Tombol Kustom
+    private JButton buatTombol(String teks, Color warnaBg) {
+        JButton tombol = new JButton(teks);
+        tombol.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+        tombol.setBackground(warnaBg);
+        tombol.setForeground(Color.WHITE);
+        tombol.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        tombol.setFocusPainted(false);
+        tombol.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return tombol;
     }
 
-    private void tambahItemToKeranjang() {
-        int selectedIndex = comboBarang.getSelectedIndex();
+    // Logika Tambah Item ke Keranjang
+    private void tambahKeKeranjang() {
+        int selectedIndex = cbBarang.getSelectedIndex();
         if (selectedIndex == 0) {
             JOptionPane.showMessageDialog(this, "Silakan pilih barang terlebih dahulu!", "Peringatan", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        String nama = namaBarang[selectedIndex];
-        double harga = hargaBarang[selectedIndex];
+        String nama = namaBarangList[selectedIndex];
+        int harga = hargaBarangList[selectedIndex];
+        
         int jumlah;
-
         try {
-            jumlah = Integer.parseInt(txtJumlah.getText());
+            jumlah = Integer.parseInt(tfJumlah.getText());
             if (jumlah <= 0) throw new NumberFormatException();
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Jumlah barang harus angka positif!", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Jumlah barang harus berupa angka positif!", "Kesalahan", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        double subtotal = harga * jumlah;
+        int subtotal = harga * jumlah;
+        keranjang.add(new ItemBelanja(nama, harga, jumlah, subtotal));
+        
+        // Masukkan ke Tabel GUI
+        tableModel.addRow(new Object[]{nama, formatRupiah.format(harga), jumlah, formatRupiah.format(subtotal)});
+        
+        // Hitung Total
         totalBelanja += subtotal;
+        lblTotal.setText(formatRupiah.format(totalBelanja));
 
-        modelTabel.addRow(new Object[]{nama, rupiahFormat.format(harga), jumlah, rupiahFormat.format(subtotal)});
-        lblTotal.setText(rupiahFormat.format(totalBelanja));
-
-        // Reset input form setelah ditambah
-        comboBarang.setSelectedIndex(0);
-        txtHarga.setText("0");
-        txtJumlah.setText("1");
+        // Reset input form kecil
+        cbBarang.setSelectedIndex(0);
+        tfHarga.setText("0");
+        tfJumlah.setText("1");
     }
 
+    // Logika Proses Pembayaran & Cetak Struk
     private void prosesPembayaran() {
-        if (modelTabel.getRowCount() == 0) {
+        if (keranjang.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Keranjang belanja masih kosong!", "Peringatan", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        double bayar;
+        int uangBayar;
         try {
-            bayar = Double.parseDouble(txtBayar.getText());
+            uangBayar = Integer.parseInt(tfBayar.getText());
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Masukkan nominal uang bayar yang valid!", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Masukkan nominal uang bayar yang valid!", "Kesalahan", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        if (bayar < totalBelanja) {
-            JOptionPane.showMessageDialog(this, "Uang pembayaran kurang dari total belanja!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+        if (uangBayar < totalBelanja) {
+            JOptionPane.showMessageDialog(this, "Uang pembayaran kurang dari total belanja!", "Pembayaran Gagal", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        double kembali = bayar - totalBelanja;
+        int kembalian = uangBayar - totalBelanja;
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("         --- NOTA PEMBAYARAN KASIR ---\n");
-        sb.append("        ").append(new Date().toString()).append("\n");
-        sb.append("--------------------------------------------------\n");
-        for (int i = 0; i < modelTabel.getRowCount(); i++) {
-            sb.append(String.format("- %s x%s = %s\n", 
-                modelTabel.getValueAt(i, 0), 
-                modelTabel.getValueAt(i, 2), 
-                modelTabel.getValueAt(i, 3)
-            ));
+        // Buat Teks Struk
+        StringBuilder struk = new StringBuilder();
+        struk.append("           --- NOTA PEMBAYARAN KASIR ---\n");
+        struk.append("               Tanggal: ").append(new Date()).append("\n");
+        struk.append("------------------------------------------------------\n");
+        for (ItemBelanja item : keranjang) {
+            struk.append(String.format(" %-15s x%-3d  @%-8s = %s\n", 
+                item.nama, item.jumlah, formatRupiah.format(item.harga), formatRupiah.format(item.subtotal)));
         }
-        sb.append("--------------------------------------------------\n");
-        sb.append(String.format("TOTAL   : %s\n", rupiahFormat.format(totalBelanja)));
-        sb.append(String.format("BAYAR   : %s\n", rupiahFormat.format(bayar)));
-        sb.append(String.format("KEMBALI : %s\n", rupiahFormat.format(kembali)));
-        sb.append("      Terima Kasih Atas Kunjungan Anda!\n");
+        struk.append("------------------------------------------------------\n");
+        struk.append(" TOTAL BELANJA : ").append(formatRupiah.format(totalBelanja)).append("\n");
+        struk.append(" UANG DIBAYAR  : ").append(formatRupiah.format(uangBayar)).append("\n");
+        struk.append(" KEMBALIAN     : ").append(formatRupiah.format(kembalian)).append("\n");
+        struk.append("------------------------------------------------------\n");
+        struk.append("         Terima Kasih Atas Kunjungan Anda!\n");
 
-        txtStruk.setText(sb.toString());
+        taStruk.setText(struk.toString());
+        JOptionPane.showMessageDialog(this, "Pembayaran Berhasil! Kembalian: " + formatRupiah.format(kembalian), "Sukses", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    private void resetTransaksi() {
-        modelTabel.setRowCount(0);
+    // Logika Reset Transaksi
+    private void resetKasir() {
+        keranjang.clear();
+        tableModel.setRowCount(0);
         totalBelanja = 0;
         lblTotal.setText("Rp 0");
-        txtBayar.setText("");
-        txtStruk.setText("");
-        comboBarang.setSelectedIndex(0);
-        txtHarga.setText("0");
-        txtJumlah.setText("1");
+        tfBayar.setText("");
+        cbBarang.setSelectedIndex(0);
+        tfHarga.setText("0");
+        tfJumlah.setText("1");
+        taStruk.setText("");
     }
 
+    // Main Method agar langsung bisa dire Run di NetBeans
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            new kasir().setVisible(true);
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                new kasir().setVisible(true);
+            }
         });
+    }
+}
+
+// Kelas Pendukung untuk Item Belanja
+class ItemBelanja {
+    String nama;
+    int harga;
+    int jumlah;
+    int subtotal;
+
+    public ItemBelanja(String nama, int harga, int jumlah, int subtotal) {
+        this.nama = nama;
+        this.harga = harga;
+        this.jumlah = jumlah;
+        this.subtotal = subtotal;
     }
             }
